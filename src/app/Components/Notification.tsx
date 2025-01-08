@@ -9,18 +9,32 @@ export type NotificationTypeData = {
 }
 
 let addNotification: (data: NotificationTypeData) => void;
+const timeout = 4000;
 
 export default function Notification() {
-  const [notifications, setNotifications] = useState<{ id: number; data: NotificationTypeData }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: number; data: NotificationTypeData; remainingTime: number }[]>([]);
 
   useEffect(() => {
     addNotification = (data: NotificationTypeData) => {
       const id = Date.now();
-      setNotifications((prev) => [{ id, data }, ...prev]);
+      setNotifications((prev) => [{ id, data, remainingTime: timeout }, ...prev]);
       setTimeout(() => {
         setNotifications((prev) => prev.filter((notification) => notification.id !== id));
-      }, 4000);
+      }, timeout);
     };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNotifications((prev) =>
+        prev.map((notification) => ({
+          ...notification,
+          remainingTime: Math.max(notification.remainingTime - 75, 0),
+        }))
+      );
+    }, 75);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -28,14 +42,25 @@ export default function Notification() {
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`p-4 rounded shadow-lg ${notification.data.type === 'info'
+          className={`rounded transition-all duration-500 shadow-lg ${notification.data.type === 'info'
             ? 'bg-blue-500'
             : notification.data.type === 'warning'
               ? 'bg-yellow-500'
               : 'bg-red-500'
-            } text-white`}
+            } text-white relative overflow-hidden`}
         >
-          {notification.data.message}
+          <div className='bg-white/50 p-1 pr-3 text-black'>
+            {/* Icon */}
+            {notification.data.title}
+            {/* Exit Icon */}
+          </div>
+          <div className='p-4 pr-2'>
+            {notification.data.message}
+          </div>
+          <div
+            className="absolute rounded-lg bottom-0 left-0 h-1 bg-white transition-all duration-200"
+            style={{ width: `${(notification.remainingTime / timeout) * 100}%`, opacity: `${(notification.remainingTime / timeout) * 100 + 30}%` }}
+          ></div>
         </div>
       ))}
     </div>
